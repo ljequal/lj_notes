@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta name="referrer" content="origin"/>
+    <title>详解vue的diff算法 - _wind - 博客园</title>
+    <meta property="og:description"
+          content="前言 我的目标是写一个非常详细的关于diff的干货，所以本文有点长。也会用到大量的图片以及代码举例，目的让看这篇文章的朋友一定弄明白diff的边边角角。 先来了解几个点... 1. 当数据发生变化时，"/>
+    <link type="text/css" rel="stylesheet"
+          href="/bundles/blog-common.css?v=svlZeZMvc3He7PqOD4T7SOuQn0_kIfLBYiy3idqd35Y1"/>
+    <link id="MainCss" type="text/css" rel="stylesheet"
+          href="/skins/ThinkInside/bundle-ThinkInside.css?v=RRjf6pEarGnbXZ86qxNycPfQivwSKWRa4heYLB15rVE1"/>
+    <link type="text/css" rel="stylesheet" href="/blog/customcss/296366.css?v=K8Jm13WXbsryy7RQNL48eV9qRBI%3d"/>
+    <link id="mobile-style" media="only screen and (max-width: 767px)" type="text/css" rel="stylesheet"
+          href="/skins/ThinkInside/bundle-ThinkInside-mobile.css?v=dZdjlmVwTnNeYyn_3io0YWHboviYj5KY0ZYF2D-nD9U1"/>
+    <link title="RSS" type="application/rss+xml" rel="alternate" href="https://www.cnblogs.com/wind-lanyan/rss"/>
+    <link title="RSD" type="application/rsd+xml" rel="EditURI" href="https://www.cnblogs.com/wind-lanyan/rsd.xml"/>
+    <link type="application/wlwmanifest+xml" rel="wlwmanifest"
+          href="https://www.cnblogs.com/wind-lanyan/wlwmanifest.xml"/>
+    <script src="//common.cnblogs.com/scripts/jquery-2.2.0.min.js"></script>
+    <script>var currentBlogId = 296366;
+    var currentBlogApp = 'wind-lanyan', cb_enable_mathjax = false;
+    var isLogined = false;</script>
+    <script src="/bundles/blog-common.js?v=OFBZTzkHKauV7mtIFLF9jlqrX-sesK9-mY9KjurLrq01"
+            type="text/javascript"></script>
+</head>
+<body>
+<a name="top"></a>
+
+
+<!--done-->
+<div id="home">
+    <div id="header">
+        <div id="blogTitle">
+            <a id="lnkBlogLogo" href="https://www.cnblogs.com/wind-lanyan/"><img id="blogLogo"
+                                                                                 src="/Skins/custom/images/logo.gif"
+                                                                                 alt="返回主页"/></a>
+
+            <!--done-->
+            <h1><a id="Header1_HeaderTitle" class="headermaintitle"
+                   href="https://www.cnblogs.com/wind-lanyan/">_wind</a></h1>
+            <h2></h2>
+
+
+        </div><!--end: blogTitle 博客的标题和副标题 -->
+        <div id="navigator">
+
+            <ul id="navList">
+                <li><a id="blog_nav_sitehome" class="menu" href="https://www.cnblogs.com/">博客园</a></li>
+                <li><a id="blog_nav_myhome" class="menu" href="https://www.cnblogs.com/wind-lanyan/">首页</a></li>
+                <li><a id="blog_nav_newpost" class="menu" rel="nofollow"
+                       href="https://i.cnblogs.com/EditPosts.aspx?opt=1">新随笔</a></li>
+                <li><a id="blog_nav_contact" class="menu" rel="nofollow"
+                       href="https://msg.cnblogs.com/send/_wind">联系</a></li>
+                <li><a id="blog_nav_rss" class="menu" href="https://www.cnblogs.com/wind-lanyan/rss">订阅</a>
+                    <!--<a id="blog_nav_rss_image" class="aHeaderXML" href="https://www.cnblogs.com/wind-lanyan/rss"><img src="//www.cnblogs.com/images/xml.gif" alt="订阅" /></a>-->
+                </li>
+                <li><a id="blog_nav_admin" class="menu" rel="nofollow" href="https://i.cnblogs.com/">管理</a></li>
+            </ul>
+            <div class="blogStats">
+
+                <div id="blog_stats">
+                    <span id="stats_post_count">随笔 - 24&nbsp; </span>
+                    <span id="stats_article_count">文章 - 0&nbsp; </span>
+                    <span id="stats-comment_count">评论 - 36</span>
+                </div>
+
+            </div><!--end: blogStats -->
+        </div><!--end: navigator 博客导航栏 -->
+    </div><!--end: header 头部 -->
+
+    <div id="main">
+        <div id="mainContent">
+            <div class="forFlow">
+
+                <div id="post_detail">
+                    <!--done-->
+                    <div id="topics">
+                        <div class="post">
+                            <h1 class="postTitle">
+                                <a id="cb_post_title_url" class="postTitle2"
+                                   href="https://www.cnblogs.com/wind-lanyan/p/9061684.html">详解vue的diff算法</a>
+                            </h1>
+                            <div class="clear"></div>
+                            <div class="postBody">
+                                <div id="cnblogs_post_body" class="blogpost-body"><h2 class="heading"
+                                                                                      data-id="heading-0">前言</h2>
+                                    <p>我的目标是写一个非常详细的关于diff的干货，所以本文有点长。也会用到大量的图片以及代码举例，目的让看这篇文章的朋友一定弄明白diff的边边角角。</p>
+                                    <p>先来了解几个点...</p>
+                                    <h3 class="heading" data-id="heading-1">1. 当数据发生变化时，vue是怎么更新节点的？</h3>
+                                    <p>
+                                        要知道渲染真实DOM的开销是很大的，比如有时候我们修改了某个数据，如果直接渲染到真实dom上会引起整个dom树的重绘和重排，有没有可能我们只更新我们修改的那一小块dom而不要更新整个dom呢？diff算法能够帮助我们。</p>
+                                    <p>我们先根据真实DOM生成一颗<code>virtual DOM</code>，当<code>virtual DOM</code>某个节点的数据改变后会生成一个新的<code>Vnode</code>，然后<code>Vnode</code>和<code>oldVnode</code>作对比，发现有不一样的地方就直接修改在真实的DOM上，然后使<code>oldVnode</code>的值为<code>Vnode</code>。
+                                    </p>
+                                    <p>diff的过程就是调用名为<code>patch</code>的函数，比较新旧节点，一边比较一边给<strong>真实的DOM</strong>打补丁。</p>
+                                    <h3 class="heading" data-id="heading-2">2. virtual DOM和真实DOM的区别？</h3>
+                                    <p>virtual DOM是将真实的DOM的数据抽取出来，以对象的形式模拟树形结构。比如dom是这样的：</p>
+                                    <div class="cnblogs_code">
+<pre><span style="color: #0000ff;">&lt;</span><span style="color: #800000;">div</span><span
+        style="color: #0000ff;">&gt;</span>
+    <span style="color: #0000ff;">&lt;</span><span style="color: #800000;">p</span><span
+            style="color: #0000ff;">&gt;</span>123<span style="color: #0000ff;">&lt;/</span><span
+            style="color: #800000;">p</span><span style="color: #0000ff;">&gt;</span>
+<span style="color: #0000ff;">&lt;/</span><span style="color: #800000;">div</span><span
+            style="color: #0000ff;">&gt;</span></pre>
+                                    </div>
+                                    <p>对应的virtual DOM（伪代码）：</p>
+                                    <div class="cnblogs_code">
+<pre><span style="color: #0000ff;">var</span> Vnode =<span style="color: #000000;"> {
+    tag: </span>'div'<span style="color: #000000;">,
+    children: [
+        { tag: </span>'p', text: '123'<span style="color: #000000;"> }
+    ]
+};</span></pre>
+                                    </div>
+                                    <p>（温馨提示：<code>VNode</code>和<code>oldVNode</code>都是对象，一定要记住）</p>
+                                    <h3 class="heading" data-id="heading-3">3. diff的比较方式？</h3>
+                                    <p>在采取diff算法比较新旧节点的时候，比较只会在同层级进行, 不会跨层级比较。</p>
+                                    <div class="cnblogs_code">
+<pre><span style="color: #0000ff;">&lt;</span><span style="color: #800000;">div</span><span
+        style="color: #0000ff;">&gt;</span>
+    <span style="color: #0000ff;">&lt;</span><span style="color: #800000;">p</span><span
+            style="color: #0000ff;">&gt;</span>123<span style="color: #0000ff;">&lt;/</span><span
+            style="color: #800000;">p</span><span style="color: #0000ff;">&gt;</span>
+<span style="color: #0000ff;">&lt;/</span><span style="color: #800000;">div</span><span
+            style="color: #0000ff;">&gt;</span>
+
+<span style="color: #0000ff;">&lt;</span><span style="color: #800000;">div</span><span
+            style="color: #0000ff;">&gt;</span>
+    <span style="color: #0000ff;">&lt;</span><span style="color: #800000;">span</span><span
+            style="color: #0000ff;">&gt;</span>456<span style="color: #0000ff;">&lt;/</span><span
+            style="color: #800000;">span</span><span style="color: #0000ff;">&gt;</span>
+<span style="color: #0000ff;">&lt;/</span><span style="color: #800000;">div</span><span
+            style="color: #0000ff;">&gt;</span></pre>
+                                    </div>
+                                    <p>上面的代码会分别比较同一层的两个div以及第二层的p和span，但是不会拿div和span作比较。在别处看到的一张很形象的图：</p>
+                                    <p>
+                                        <img src="https://images2018.cnblogs.com/blog/998023/201805/998023-20180519212338609-1617459354.png"
+                                             alt=""/></p>
+                                    <p>&nbsp;</p>
+                                    <h2 class="heading" data-id="heading-4">diff流程图</h2>
+                                    <p>当数据发生改变时，set方法会让调用<code>Dep.notify</code>通知所有订阅者Watcher，订阅者就会调用<code>patch</code>给真实的DOM打补丁，更新相应的视图。
+                                    </p>
+                                    <p>
+                                        <img src="https://images2018.cnblogs.com/blog/998023/201805/998023-20180519212357826-1474719173.png"
+                                             alt=""/></p>
+                                    <p>&nbsp;</p>
+                                    <h2 class="heading" data-id="heading-5">具体分析</h2>
+                                    <h3 class="heading" data-id="heading-6">patch</h3>
+                                    <p>来看看<code>patch</code>是怎么打补丁的（代码只保留核心部分）</p>
+                                    <div class="cnblogs_code">
+<pre><span style="color: #0000ff;">function</span><span style="color: #000000;"> patch (oldVnode, vnode) {
+    </span><span style="color: #008000;">//</span><span style="color: #008000;"> some code</span>
+    <span style="color: #0000ff;">if</span><span style="color: #000000;"> (sameVnode(oldVnode, vnode)) {
+        patchVnode(oldVnode, vnode)
+    } </span><span style="color: #0000ff;">else</span><span style="color: #000000;"> {
+        const oEl </span>= oldVnode.el <span style="color: #008000;">//</span><span style="color: #008000;"> 当前oldVnode对应的真实元素节点</span>
+        let parentEle = api.parentNode(oEl)  <span style="color: #008000;">//</span><span
+            style="color: #008000;"> 父元素</span>
+        createEle(vnode)  <span style="color: #008000;">//</span><span style="color: #008000;"> 根据Vnode生成新元素</span>
+        <span style="color: #0000ff;">if</span> (parentEle !== <span style="color: #0000ff;">null</span><span
+            style="color: #000000;">) {
+            api.insertBefore(parentEle, vnode.el, api.nextSibling(oEl)) </span><span
+            style="color: #008000;">//</span><span style="color: #008000;"> 将新元素添加进父元素</span>
+            api.removeChild(parentEle, oldVnode.el)  <span style="color: #008000;">//</span><span
+            style="color: #008000;"> 移除以前的旧元素节点</span>
+            oldVnode = <span style="color: #0000ff;">null</span><span style="color: #000000;">
+        }
+    }
+    </span><span style="color: #008000;">//</span><span style="color: #008000;"> some code </span>
+    <span style="color: #0000ff;">return</span><span style="color: #000000;"> vnode
+}</span></pre>
+                                    </div>
+                                    <p>patch函数接收两个参数<code>oldVnode</code>和<code>Vnode</code>分别代表新的节点和之前的旧节点</p>
+                                    <ul>
+                                        <li>判断两节点是否值得比较，值得比较则执行<code>patchVnode</code></li>
+                                    </ul>
+                                    <div class="cnblogs_code">
+<pre><span style="color: #0000ff;">function</span><span style="color: #000000;"> sameVnode (a, b) {
+  </span><span style="color: #0000ff;">return</span><span style="color: #000000;"> (
+    a.key </span>=== b.key &amp;&amp;  <span style="color: #008000;">//</span><span style="color: #008000;"> key值</span>
+    a.tag === b.tag &amp;&amp;  <span style="color: #008000;">//</span><span style="color: #008000;"> 标签名</span>
+    a.isComment === b.isComment &amp;&amp;  <span style="color: #008000;">//</span><span style="color: #008000;"> 是否为注释节点</span>
+    <span style="color: #008000;">//</span><span
+            style="color: #008000;"> 是否都定义了data，data包含一些具体信息，例如onclick , style</span>
+    isDef(a.data) === isDef(b.data) &amp;&amp;<span style="color: #000000;">
+    sameInputType(a, b) </span><span style="color: #008000;">//</span><span style="color: #008000;"> 当标签是&lt;input&gt;的时候，type必须相同</span>
+<span style="color: #000000;">  )
+}</span></pre>
+                                    </div>
+                                    <ul>
+                                        <li>不值得比较则用<code>Vnode</code>替换<code>oldVnode</code></li>
+                                    </ul>
+                                    <p>如果两个节点都是一样的，那么就深入检查他们的子节点。如果两个节点不一样那就说明<code>Vnode</code>完全被改变了，就可以直接替换<code>oldVnode</code>。
+                                    </p>
+                                    <p>
+                                        虽然这两个节点不一样但是他们的子节点一样怎么办？别忘了，diff可是逐层比较的，如果第一层不一样那么就不会继续深入比较第二层了。（我在想这算是一个缺点吗？相同子节点不能重复利用了...）</p>
+                                    <h3 class="heading" data-id="heading-7">patchVnode</h3>
+                                    <p>当我们确定两个节点值得比较之后我们会对两个节点指定<code>patchVnode</code>方法。那么这个方法做了什么呢？</p>
+                                    <div class="cnblogs_code">
+<pre><span style="color: #000000;">patchVnode (oldVnode, vnode) {
+    const el </span>= vnode.el =<span style="color: #000000;"> oldVnode.el
+    let i, oldCh </span>= oldVnode.children, ch =<span style="color: #000000;"> vnode.children
+    </span><span style="color: #0000ff;">if</span> (oldVnode === vnode) <span style="color: #0000ff;">return</span>
+    <span style="color: #0000ff;">if</span> (oldVnode.text !== <span style="color: #0000ff;">null</span> &amp;&amp; vnode.text !== <span
+            style="color: #0000ff;">null</span> &amp;&amp; oldVnode.text !==<span style="color: #000000;"> vnode.text) {
+        api.setTextContent(el, vnode.text)
+    }</span><span style="color: #0000ff;">else</span><span style="color: #000000;"> {
+        updateEle(el, vnode, oldVnode)
+        </span><span style="color: #0000ff;">if</span> (oldCh &amp;&amp; ch &amp;&amp; oldCh !==<span
+            style="color: #000000;"> ch) {
+            updateChildren(el, oldCh, ch)
+        }</span><span style="color: #0000ff;">else</span> <span style="color: #0000ff;">if</span><span
+            style="color: #000000;"> (ch){
+            createEle(vnode) </span><span style="color: #008000;">//</span><span style="color: #008000;">create el's children dom</span>
+        }<span style="color: #0000ff;">else</span> <span style="color: #0000ff;">if</span><span style="color: #000000;"> (oldCh){
+            api.removeChildren(el)
+        }
+    }
+}</span></pre>
+                                    </div>
+                                    <p>这个函数做了以下事情：</p>
+                                    <ul>
+                                        <li>找到对应的真实dom，称为<code>el</code></li>
+                                        <li>
+                                            判断<code>Vnode</code>和<code>oldVnode</code>是否指向同一个对象，如果是，那么直接<code>return</code>
+                                        </li>
+                                        <li>如果他们都有文本节点并且不相等，那么将<code>el</code>的文本节点设置为<code>Vnode</code>的文本节点。</li>
+                                        <li>如果<code>oldVnode</code>有子节点而<code>Vnode</code>没有，则删除<code>el</code>的子节点</li>
+                                        <li>如果<code>oldVnode</code>没有子节点而<code>Vnode</code>有，则将<code>Vnode</code>的子节点真实化之后添加到<code>el</code>
+                                        </li>
+                                        <li>如果两者都有子节点，则执行<code>updateChildren</code>函数比较子节点，这一步很重要</li>
+                                    </ul>
+                                    <p>其他几个点都很好理解，我们详细来讲一下updateChildren</p>
+                                    <h3 class="heading" data-id="heading-8">updateChildren</h3>
+                                    <p>代码量很大，不方便一行一行的讲解，所以下面结合一些示例图来描述一下。</p>
+                                    <div class="cnblogs_code">
+<pre><span style="color: #000000;">updateChildren (parentElm, oldCh, newCh) {
+    let oldStartIdx </span>= 0, newStartIdx = 0<span style="color: #000000;">
+    let oldEndIdx </span>= oldCh.length - 1<span style="color: #000000;">
+    let oldStartVnode </span>= oldCh[0<span style="color: #000000;">]
+    let oldEndVnode </span>=<span style="color: #000000;"> oldCh[oldEndIdx]
+    let newEndIdx </span>= newCh.length - 1<span style="color: #000000;">
+    let newStartVnode </span>= newCh[0<span style="color: #000000;">]
+    let newEndVnode </span>=<span style="color: #000000;"> newCh[newEndIdx]
+    let oldKeyToIdx
+    let idxInOld
+    let elmToMove
+    let before
+    </span><span style="color: #0000ff;">while</span> (oldStartIdx &lt;= oldEndIdx &amp;&amp; newStartIdx &lt;=<span
+        style="color: #000000;"> newEndIdx) {
+        </span><span style="color: #0000ff;">if</span> (oldStartVnode == <span style="color: #0000ff;">null</span>) {   <span
+        style="color: #008000;">//</span><span style="color: #008000;"> 对于vnode.key的比较，会把oldVnode = null</span>
+            oldStartVnode = oldCh[++<span style="color: #000000;">oldStartIdx]
+        }</span><span style="color: #0000ff;">else</span> <span style="color: #0000ff;">if</span> (oldEndVnode == <span
+            style="color: #0000ff;">null</span><span style="color: #000000;">) {
+            oldEndVnode </span>= oldCh[--<span style="color: #000000;">oldEndIdx]
+        }</span><span style="color: #0000ff;">else</span> <span
+            style="color: #0000ff;">if</span> (newStartVnode == <span style="color: #0000ff;">null</span><span
+            style="color: #000000;">) {
+            newStartVnode </span>= newCh[++<span style="color: #000000;">newStartIdx]
+        }</span><span style="color: #0000ff;">else</span> <span style="color: #0000ff;">if</span> (newEndVnode == <span
+            style="color: #0000ff;">null</span><span style="color: #000000;">) {
+            newEndVnode </span>= newCh[--<span style="color: #000000;">newEndIdx]
+        }</span><span style="color: #0000ff;">else</span> <span style="color: #0000ff;">if</span><span
+            style="color: #000000;"> (sameVnode(oldStartVnode, newStartVnode)) {
+            patchVnode(oldStartVnode, newStartVnode)
+            oldStartVnode </span>= oldCh[++<span style="color: #000000;">oldStartIdx]
+            newStartVnode </span>= newCh[++<span style="color: #000000;">newStartIdx]
+        }</span><span style="color: #0000ff;">else</span> <span style="color: #0000ff;">if</span><span
+            style="color: #000000;"> (sameVnode(oldEndVnode, newEndVnode)) {
+            patchVnode(oldEndVnode, newEndVnode)
+            oldEndVnode </span>= oldCh[--<span style="color: #000000;">oldEndIdx]
+            newEndVnode </span>= newCh[--<span style="color: #000000;">newEndIdx]
+        }</span><span style="color: #0000ff;">else</span> <span style="color: #0000ff;">if</span><span
+            style="color: #000000;"> (sameVnode(oldStartVnode, newEndVnode)) {
+            patchVnode(oldStartVnode, newEndVnode)
+            api.insertBefore(parentElm, oldStartVnode.el, api.nextSibling(oldEndVnode.el))
+            oldStartVnode </span>= oldCh[++<span style="color: #000000;">oldStartIdx]
+            newEndVnode </span>= newCh[--<span style="color: #000000;">newEndIdx]
+        }</span><span style="color: #0000ff;">else</span> <span style="color: #0000ff;">if</span><span
+            style="color: #000000;"> (sameVnode(oldEndVnode, newStartVnode)) {
+            patchVnode(oldEndVnode, newStartVnode)
+            api.insertBefore(parentElm, oldEndVnode.el, oldStartVnode.el)
+            oldEndVnode </span>= oldCh[--<span style="color: #000000;">oldEndIdx]
+            newStartVnode </span>= newCh[++<span style="color: #000000;">newStartIdx]
+        }</span><span style="color: #0000ff;">else</span><span style="color: #000000;"> {
+           </span><span style="color: #008000;">//</span><span style="color: #008000;"> 使用key时的比较</span>
+            <span style="color: #0000ff;">if</span> (oldKeyToIdx ===<span style="color: #000000;"> undefined) {
+                oldKeyToIdx </span>= createKeyToOldIdx(oldCh, oldStartIdx, oldEndIdx) <span
+            style="color: #008000;">//</span><span style="color: #008000;"> 有key生成index表</span>
+<span style="color: #000000;">            }
+            idxInOld </span>=<span style="color: #000000;"> oldKeyToIdx[newStartVnode.key]
+            </span><span style="color: #0000ff;">if</span> (!<span style="color: #000000;">idxInOld) {
+                api.insertBefore(parentElm, createEle(newStartVnode).el, oldStartVnode.el)
+                newStartVnode </span>= newCh[++<span style="color: #000000;">newStartIdx]
+            }
+            </span><span style="color: #0000ff;">else</span><span style="color: #000000;"> {
+                elmToMove </span>=<span style="color: #000000;"> oldCh[idxInOld]
+                </span><span style="color: #0000ff;">if</span> (elmToMove.sel !==<span style="color: #000000;"> newStartVnode.sel) {
+                    api.insertBefore(parentElm, createEle(newStartVnode).el, oldStartVnode.el)
+                }</span><span style="color: #0000ff;">else</span><span style="color: #000000;"> {
+                    patchVnode(elmToMove, newStartVnode)
+                    oldCh[idxInOld] </span>= <span style="color: #0000ff;">null</span><span style="color: #000000;">
+                    api.insertBefore(parentElm, elmToMove.el, oldStartVnode.el)
+                }
+                newStartVnode </span>= newCh[++<span style="color: #000000;">newStartIdx]
+            }
+        }
+    }
+    </span><span style="color: #0000ff;">if</span> (oldStartIdx &gt;<span style="color: #000000;"> oldEndIdx) {
+        before </span>= newCh[newEndIdx + 1] == <span style="color: #0000ff;">null</span> ? <span
+            style="color: #0000ff;">null</span> : newCh[newEndIdx + 1<span style="color: #000000;">].el
+        addVnodes(parentElm, before, newCh, newStartIdx, newEndIdx)
+    }</span><span style="color: #0000ff;">else</span> <span style="color: #0000ff;">if</span> (newStartIdx &gt;<span
+            style="color: #000000;"> newEndIdx) {
+        removeVnodes(parentElm, oldCh, oldStartIdx, oldEndIdx)
+    }
+}</span></pre>
+                                    </div>
+                                    <p>先说一下这个函数做了什么</p>
+                                    <ul>
+                                        <li>
+                                            将<code>Vnode</code>的子节点<code>Vch</code>和<code>oldVnode</code>的子节点<code>oldCh</code>提取出来
+                                        </li>
+                                        <li><code>oldCh</code>和<code>vCh</code>各有两个头尾的变量<code>StartIdx</code>和<code>EndIdx</code>，它们的2个变量相互比较，一共有4种比较方式。如果4种比较都没匹配，如果设置了<code>key</code>，就会用<code>key</code>进行比较，在比较的过程中，变量会往中间靠，一旦<code>StartIdx&gt;EndIdx</code>表明<code>oldCh</code>和<code>vCh</code>至少有一个已经遍历完了，就会结束比较。
+                                        </li>
+                                    </ul>
+                                    <h4 class="heading" data-id="heading-9">图解updateChildren</h4>
+                                    <p>终于来到了这一部分，上面的总结相信很多人也看得一脸懵逼，下面我们好好说道说道。（这都是我自己画的，求推荐好用的画图工具...）</p>
+                                    <p>&nbsp;</p>
+                                    <p>粉红色的部分为oldCh和vCh</p>
+                                    <p>
+                                        <img src="https://images2018.cnblogs.com/blog/998023/201805/998023-20180519211756656-545182812.png"
+                                             alt=""/></p>
+                                    <p>&nbsp;</p>
+                                    <p>我们将它们取出来并分别用s和e指针指向它们的头child和尾child</p>
+                                    <p>
+                                        <img src="https://images2018.cnblogs.com/blog/998023/201805/998023-20180519211809225-1140464542.png"
+                                             alt=""/></p>
+                                    <p>&nbsp;</p>
+                                    <p>现在分别对<code>oldS、oldE、S、E</code>两两做<code>sameVnode</code>比较，有四种比较方式，当其中两个能匹配上那么真实dom中的相应节点会移到Vnode相应的位置，这句话有点绕，打个比方
+                                    </p>
+                                    <ul>
+                                        <li>如果是oldS和E匹配上了，那么真实dom中的第一个节点会移到最后</li>
+                                        <li>如果是oldE和S匹配上了，那么真实dom中的最后一个节点会移到最前，匹配上的两个指针向中间移动</li>
+                                        <li>如果四种匹配没有一对是成功的，那么遍历<code>oldChild</code>，<code>S</code>挨个和他们匹配，匹配成功就在真实dom中将成功的节点移到最前面，如果依旧没有成功的，那么将<code>S对应的节点</code>插入到dom中对应的<code>oldS</code>位置，<code>oldS</code>和<code>S</code>指针向中间移动。
+                                        </li>
+                                    </ul>
+                                    <p>再配个图</p>
+                                    <p>
+                                        <img src="https://images2018.cnblogs.com/blog/998023/201805/998023-20180519213155724-1596106357.png"
+                                             alt=""/></p>
+                                    <ul>
+                                        <li>第一步</li>
+                                    </ul>
+                                    <div class="cnblogs_code">
+<pre>oldS = a, oldE =<span style="color: #000000;"> d；
+S </span>= a, E = b;</pre>
+                                    </div>
+                                    <p><code>oldS</code>和<code>S</code>匹配，则将dom中的a节点放到第一个，已经是第一个了就不管了，此时dom的位置为：a b d
+                                    </p>
+                                    <ul>
+                                        <li>第二步</li>
+                                    </ul>
+                                    <div class="cnblogs_code">
+<pre>oldS = b, oldE =<span style="color: #000000;"> d；
+S </span>= c, E = b;</pre>
+                                    </div>
+                                    <p><code>oldS</code>和<code>E</code>匹配，就将原本的b节点移动到最后，因为<code>E</code>是最后一个节点，他们位置要一致，这就是上面说的：<strong>当其中两个能匹配上那么真实dom中的相应节点会移到Vnode相应的位置</strong>，此时dom的位置为：a
+                                        d b</p>
+                                    <ul>
+                                        <li>第三步</li>
+                                    </ul>
+                                    <div class="cnblogs_code">
+<pre>oldS = d, oldE =<span style="color: #000000;"> d；
+S </span>= c, E = d;</pre>
+                                    </div>
+                                    <p><code>oldE</code>和<code>E</code>匹配，位置不变此时dom的位置为：a d b</p>
+                                    <ul>
+                                        <li>第四步</li>
+                                    </ul>
+                                    <div class="cnblogs_code">
+<pre>oldS++<span style="color: #000000;">;
+oldE</span>--<span style="color: #000000;">;
+oldS </span>&gt; oldE;</pre>
+                                    </div>
+                                    <p>遍历结束，说明<code>oldCh</code>先遍历完。就将剩余的<code>vCh</code>节点根据自己的的index插入到真实dom中去，此时dom位置为：a
+                                        c d b</p>
+                                    <p>一次模拟完成。</p>
+                                    <p>这个匹配过程的结束有两个条件：</p>
+                                    <ul>
+                                        <li><code>oldS &gt; oldE</code>表示<code>oldCh</code>先遍历完，那么就将多余的<code>vCh</code>根据index添加到dom中去（如上图）
+                                        </li>
+                                        <li><code>S &gt; E</code>表示vCh先遍历完，那么就在真实dom中将区间为<code>[oldS, oldE]</code>的多余节点删掉
+                                        </li>
+                                    </ul>
+                                    <p>
+                                        <img src="https://images2018.cnblogs.com/blog/998023/201805/998023-20180519213058181-48547172.png"
+                                             alt=""/></p>
+                                    <p>&nbsp;</p>
+                                    <p>&nbsp;</p>
+                                    <p>下面再举一个例子，可以像上面那样自己试着模拟一下</p>
+                                    <p>&nbsp;<img
+                                            src="https://images2018.cnblogs.com/blog/998023/201805/998023-20180519213116477-1550894853.png"
+                                            alt=""/></p>
+                                    <p>&nbsp;</p>
+                                    <p>&nbsp;</p>
+                                    <p>当这些节点<code>sameVnode</code>成功后就会紧接着执行<code>patchVnode</code>了，可以看一下上面的代码</p>
+                                    <div class="cnblogs_code">
+<pre><span style="color: #0000ff;">if</span><span style="color: #000000;"> (sameVnode(oldStartVnode, newStartVnode)) {
+    patchVnode(oldStartVnode, newStartVnode)
+}</span></pre>
+                                    </div>
+                                    <p>
+                                        就这样层层递归下去，直到将oldVnode和Vnode中的所有子节点比对完。也将dom的所有补丁都打好啦。那么现在再回过去看updateChildren的代码会不会容易很多呢？</p>
+                                    <h2 class="heading" data-id="heading-10">总结</h2>
+                                    <p>以上为diff算法的全部过程，放上一张文章开始就发过的总结图，可以试试看着这张图回忆一下diff的过程。</p>
+                                    <p>&nbsp;<img
+                                            src="https://images2018.cnblogs.com/blog/998023/201805/998023-20180519213134497-676744027.png"
+                                            alt=""/></p>
+                                    <p>&nbsp;</p>
+                                    <p>&nbsp;</p>
+                                    <p>欢迎在评论区多多交流。&nbsp;</p>
+                                    <blockquote>
+                                        <p>参考文章</p>
+                                        <p>
+                                            <a href="https://link.juejin.im/?target=https%3A%2F%2Fgithub.com%2Faooy%2Fblog%2Fissues%2F2"
+                                               rel="nofollow noopener noreferrer" target="_blank">解析vue2.0的diff算法</a>
+                                        </p>
+                                        <p>
+                                            <a href="https://link.juejin.im/?target=https%3A%2F%2Fgithub.com%2Fanswershuto%2FlearnVue%2Fblob%2Fmaster%2Fdocs%2FVirtualDOM%25E4%25B8%258Ediff(Vue%25E5%25AE%259E%25E7%258E%25B0).MarkDown"
+                                               rel="nofollow noopener noreferrer"
+                                               target="_blank">VirtualDOM与diff(Vue实现)</a></p>
+                                    </blockquote>
+                                </div>
+                                <div id="MySignature"></div>
+                                <div class="clear"></div>
+                                <div id="blog_post_info_block">
+                                    <div id="BlogPostCategory"></div>
+                                    <div id="EntryTag"></div>
+                                    <div id="blog_post_info">
+                                    </div>
+                                    <div class="clear"></div>
+                                    <div id="post_next_prev"></div>
+                                </div>
+
+
+                            </div>
+                            <div class="postDesc">posted @ <span id="post-date">2018-05-19 21:25</span> <a
+                                    href='https://www.cnblogs.com/wind-lanyan/'>_wind</a> 阅读(<span id="post_view_count">...</span>)
+                                评论(<span id="post_comment_count">...</span>) <a
+                                        href="https://i.cnblogs.com/EditPosts.aspx?postid=9061684" rel="nofollow">编辑</a>
+                                <a href="#" onclick="AddToWz(9061684);return false;">收藏</a></div>
+                        </div>
+                        <script type="text/javascript">var allowComments = true, cb_blogId = 296366,
+                            cb_entryId = 9061684, cb_blogApp = currentBlogApp,
+                            cb_blogUserGuid = 'f84c2f89-2352-e611-9fc1-ac853d9f53cc',
+                            cb_entryCreatedDate = '2018/5/19 21:25:00';
+                        loadViewCount(cb_entryId);
+                        var cb_postType = 1;
+                        var isMarkdown = false;</script>
+
+                    </div><!--end: topics 文章、评论容器-->
+                </div>
+                <a name="!comments"></a>
+                <div id="blog-comments-placeholder"></div>
+                <script type="text/javascript">var commentManager = new blogCommentManager();
+                commentManager.renderComments(0);</script>
+                <div id='comment_form' class='commentform'>
+                    <a name='commentform'></a>
+                    <div id='divCommentShow'></div>
+                    <div id='comment_nav'><span id='span_refresh_tips'></span><a href='javascript:void(0);'
+                                                                                 onclick='return RefreshCommentList();'
+                                                                                 id='lnk_RefreshComments' runat='server'
+                                                                                 clientidmode='Static'>刷新评论</a><a
+                            href='#' onclick='return RefreshPage();'>刷新页面</a><a href='#top'>返回顶部</a></div>
+                    <div id='comment_form_container'></div>
+                    <div class='ad_text_commentbox' id='ad_text_under_commentbox'></div>
+                    <div id='ad_t2'></div>
+                    <div id='opt_under_post'></div>
+                    <script async='async' src='https://www.googletagservices.com/tag/js/gpt.js'></script>
+                    <script>
+                        var googletag = googletag || {};
+                        googletag.cmd = googletag.cmd || [];
+                    </script>
+                    <script>
+                        googletag.cmd.push(function () {
+                            googletag.defineSlot('/1090369/C1', [300, 250], 'div-gpt-ad-1546353474406-0').addService(googletag.pubads());
+                            googletag.defineSlot('/1090369/C2', [468, 60], 'div-gpt-ad-1539008685004-0').addService(googletag.pubads());
+                            googletag.pubads().enableSingleRequest();
+                            googletag.enableServices();
+                        });
+                    </script>
+                    <div id='cnblogs_c1' class='c_ad_block'>
+                        <div id='div-gpt-ad-1546353474406-0' style='height:250px; width:300px;'></div>
+                    </div>
+                    <div id='under_post_news'></div>
+                    <div id='cnblogs_c2' class='c_ad_block'>
+                        <div id='div-gpt-ad-1539008685004-0' style='height:60px; width:468px;'></div>
+                    </div>
+                    <div id='under_post_kb'></div>
+                    <div id='HistoryToday' class='c_ad_block'></div>
+                    <script type='text/javascript'>
+                        if (enablePostBottom()) {
+                            codeHighlight();
+                            fixPostBody();
+                            setTimeout(function () {
+                                incrementViewCount(cb_entryId);
+                            }, 50);
+                            deliverT2();
+                            deliverC1();
+                            deliverC2();
+                            loadNewsAndKb();
+                            loadBlogSignature();
+                            LoadPostInfoBlock(cb_blogId, cb_entryId, cb_blogApp, cb_blogUserGuid);
+                            GetPrevNextPost(cb_entryId, cb_blogId, cb_entryCreatedDate, cb_postType);
+                            loadOptUnderPost();
+                            GetHistoryToday(cb_blogId, cb_blogApp, cb_entryCreatedDate);
+                        }
+                    </script>
+                </div>
+
+
+            </div><!--end: forFlow -->
+        </div><!--end: mainContent 主体内容容器-->
+
+        <div id="sideBar">
+            <div id="sideBarMain">
+
+                <!--done-->
+                <div class="newsItem">
+                    <h3 class="catListTitle">公告</h3>
+                    <div id="blog-news"></div>
+                    <script type="text/javascript">loadBlogNews();</script>
+                </div>
+
+                <div id="blog-calendar" style="display:none"></div>
+                <script type="text/javascript">loadBlogDefaultCalendar();</script>
+
+                <div id="leftcontentcontainer">
+                    <div id="blog-sidecolumn"></div>
+                    <script type="text/javascript">loadBlogSideColumn();</script>
+                </div>
+
+            </div><!--end: sideBarMain -->
+        </div><!--end: sideBar 侧边栏容器 -->
+        <div class="clear"></div>
+    </div><!--end: main -->
+    <div class="clear"></div>
+    <div id="footer">
+
+        <!--done-->
+        Copyright &copy;2019 _wind
+    </div><!--end: footer -->
+</div><!--end: home 自定义的最大容器 -->
+
+</body>
+</html>
